@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional, List
 from app.database import get_db
 from app.models.doctor_model import DoctorProfile
@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-# --- Schemas ---
+
 
 class ClinicHour(BaseModel):
     day: str
@@ -50,37 +50,38 @@ class DoctorProfileResponse(BaseModel):
 
 
 def format_doctor_data(doctor, db: Session):
+    try:
+        patient_count = db.query(func.count(Appointment.patient_id)).filter(
+            Appointment.doctor_id == doctor.doctor_id).scalar() or 0
+        reviews_count = db.query(func.count(Diagnosis.diagnosis_id)).filter(
+            Diagnosis.doctor_id == doctor.doctor_id).scalar() or 0
 
-    patient_count = db.query(func.count(Appointment.patient_id)).filter(
-        Appointment.doctor_id == doctor.doctor_id).scalar()
-    reviews_count = db.query(func.count(Diagnosis.diagnosis_id)).filter(
-        Diagnosis.doctor_id == doctor.doctor_id).scalar()
-    avg_rating = db.query(func.avg(Diagnosis.rating)).filter(Diagnosis.doctor_id == doctor.doctor_id).scalar() or 0
+        schedules = db.query(DoctorSchedule).filter(DoctorSchedule.doctor_id == doctor.doctor_id).all()
+        clinic_hours = [
+            {"day": s.day_of_week.value, "start": s.start_time.strftime("%H:%M") if s.start_time else None,
+             "end": s.end_time.strftime("%H:%M") if s.end_time else None}
+            for s in schedules
+        ]
 
-    schedules = db.query(DoctorSchedule).filter(DoctorSchedule.doctor_id == doctor.doctor_id).all()
-    clinic_hours = [
-        {"day": s.day_of_week.value, "start": s.start_time.strftime("%H:%M") if s.start_time else None,
-         "end": s.end_time.strftime("%H:%M") if s.end_time else None}
-        for s in schedules
-    ]
-
-    return {
-        "doctor_id": doctor.doctor_id,  # تم تغيير id إلى doctor_id ليطابق الـ Schema
-        "name": doctor.user.name,
-        "photo": doctor.user.photo,
-        "phone": doctor.user.phone,
-        "email": doctor.user.email,
-        "position": doctor.position,
-        "yearsOfExperience": doctor.years_of_experience,
-        "education": doctor.education,
-        "clinical_expertise": doctor.clinical_expertise,
-        "description": doctor.bio,
-        "professionalBiography": doctor.bio,
-        "starRating": round(avg_rating, 1),
-        "patientReviews": reviews_count,
-        "patientNumbers": patient_count,
-        "clinicHours": clinic_hours
-    }
+        return {
+            "doctor_id": doctor.doctor_id,  
+            "name": doctor.user.name if doctor.user else "Unknown",
+            "photo": doctor.user.photo if doctor.user else None,
+            "phone": doctor.user.phone if doctor.user else None,
+            "email": doctor.user.email if doctor.user else None,
+            "position": doctor.position,
+            "yearsOfExperience": doctor.years_of_experience,
+            "education": doctor.education,
+            "clinical_expertise": doctor.clinical_expertise,
+            "description": doctor.bio,
+            "professionalBiography": doctor.bio,
+            "starRating": 0.0,
+            "patientReviews": reviews_count,
+            "patientNumbers": patient_count,
+            "clinicHours": clinic_hours
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error formatting doctor data: {str(e)}")
 
 
 
