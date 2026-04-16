@@ -23,4 +23,4 @@ class Device(Base):
 
     # relationship
     service: Mapped["Service"] = relationship("Service", back_populates="devices")
-    specialist: Mapped["Specialist"] = relationship("Specialist", back_populates="devices")
+    specialist: Mapped["Specialist"] = relationship("Specialist", back_populates="devices", foreign_keys=[specialist_id])

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -24,6 +24,19 @@ class RegisterPatientRequest(BaseModel):
     email: EmailStr
     password: str
 
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        email: EmailStr = Form(...),
+        password: str = Form(...),
+    ):
+        return cls(
+            name=name,
+            email=email,
+            password=password,
+        )
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
@@ -39,7 +52,7 @@ def create_access_token(data: dict):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 @router.post("/register", status_code=201, response_model=TokenResponse)
-def register_patient(data: RegisterPatientRequest, db: Session = Depends(get_db)):
+def register_patient(data: RegisterPatientRequest = Depends(RegisterPatientRequest.as_form), db: Session = Depends(get_db)):
 
     existing_user = db.query(User).filter(User.email == data.email).first()
     if existing_user:

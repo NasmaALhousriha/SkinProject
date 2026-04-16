@@ -42,3 +42,7 @@ __all__ = [
     "Report",
     "DoctorService",
 ]
+
+from sqlalchemy.orm import configure_mappers
+
+configure_mappers()

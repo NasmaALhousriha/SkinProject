@@ -12,7 +12,7 @@ router = APIRouter(prefix="/secretaries", tags=["Secretaries"])
 
 @router.post("/create", response_model=SecretaryCreateResponse)
 def create_secretary(
-    secretary_data: SecretaryCreate,
+    secretary_data: SecretaryCreate = Depends(SecretaryCreate.as_form),
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):

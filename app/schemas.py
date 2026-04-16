@@ -69,12 +69,12 @@ class UserOut(BaseModel):
     class Config:
         orm_mode = True
 
-# ===== Login =====
+# Login
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
-# ===== Appointments =====
+#  Appointments
 class AppointmentCreate(BaseModel):
     doctor_id: int
     patient_id: int
@@ -92,7 +92,7 @@ class AppointmentOut(BaseModel):
     class Config:
         orm_mode = True
 
-# ===== Diagnosis =====
+# Diagnosis
 class DiagnosisCreate(BaseModel):
     doctor_id: int
     patient_id: int
@@ -109,13 +109,13 @@ class DiagnosisOut(BaseModel):
     class Config:
         orm_mode = True
 
-# ===== Doctors =====
+#Doctors
 class DoctorCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
     phone: Optional[str] = None
-    photo: Optional[str] = None
+    photo: Optional[UploadFile] = None
     bio: Optional[str] = None
     years_of_experience: Optional[int] = None
     position: Optional[str] = None
@@ -129,7 +129,7 @@ class DoctorCreate(BaseModel):
         email: EmailStr = Form(...),
         password: str = Form(...),
         phone: Optional[str] = Form(None),
-        photo: Optional[UploadFile] = File(None),
+        photo: UploadFile = File(None),
         bio: Optional[str] = Form(None),
         years_of_experience: Optional[int] = Form(None),
         position: Optional[str] = Form(None),
@@ -154,12 +154,27 @@ class DoctorCreateResponse(BaseModel):
     doctor_id: int
     user_id: int
 
-# ===== Secretaries =====
+#  Secretaries
 class SecretaryCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
     phone: Optional[str] = None
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        email: EmailStr = Form(...),
+        password: str = Form(...),
+        phone: Optional[str] = Form(None),
+    ):
+        return cls(
+            name=name,
+            email=email,
+            password=password,
+            phone=phone,
+        )
 
 class SecretaryCreateResponse(BaseModel):
     message: str
