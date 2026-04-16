@@ -40,6 +40,7 @@ from app.routers.offer.view_offer import router as view_offer_router
 from app.routers.device.add_device import router as add_device_router
 from app.routers.doctors.add_doctor import router as add_doctor_router
 from app.routers.secretary.add_secretary import router as add_secretary_router
+from app.routers.specialist.add_specialist import router as add_specialist_router
 
 
 app = FastAPI()
@@ -75,4 +76,5 @@ app.include_router(doctor_profile_router)
 app.include_router(add_report_router)
 app.include_router(add_doctor_router)
 app.include_router(add_secretary_router)
+app.include_router(add_specialist_router)
 

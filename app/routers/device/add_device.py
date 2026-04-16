@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.device_model import Device
 from app.models.service_model import Service
+from app.models.specialist_model import Specialist
 from app.models.user_model import UserRoleEnum
 from app.dependencies import get_current_user
 
@@ -15,6 +16,7 @@ from app.dependencies import get_current_user
 class DeviceCreate(BaseModel):
     name: str
     service_id: int
+    specialist_id: int
     description: Optional[str] = None
     image: Optional[UploadFile] = None
 
@@ -23,12 +25,14 @@ class DeviceCreate(BaseModel):
         cls,
         name: str = Form(..., description="اسم الجهاز"),
         service_id: int = Form(..., description="ID الخدمة التي يتبع لها الجهاز"),
+        specialist_id: int = Form(..., description="ID التخصص"),
         description: str = Form(None),
         image: UploadFile = File(None),
     ):
         return cls(
             name=name,
             service_id=service_id,
+            specialist_id=specialist_id,
             description=description,
             image=image,
         )
@@ -60,10 +64,16 @@ def add_device(
 ):
     if current_user.role != UserRoleEnum.SECRETARY:
         raise HTTPException(status_code=403, detail="Only Secretaries can add devices")
-    # اول شي بدي اتحقق اذا الخدمة موجودة مشان ضيف جهاز
+    
+    # التحقق من الخدمة
     service_check = db.query(Service).filter(Service.service_id == device_data.service_id).first()
     if not service_check:
         raise HTTPException(status_code=404, detail="Service ID not found")
+    
+    # التحقق من التخصص
+    specialist_check = db.query(Specialist).filter(Specialist.specialist_id == device_data.specialist_id).first()
+    if not specialist_check:
+        raise HTTPException(status_code=404, detail="Specialist ID not found")
 
 
     image_path = None
@@ -83,6 +93,7 @@ def add_device(
     new_device = Device(
         name=device_data.name,
         service_id=device_data.service_id,
+        specialist_id=device_data.specialist_id,
         description=device_data.description,
         image=image_path
     )
