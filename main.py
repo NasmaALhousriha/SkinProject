@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Routers
 # from app.routers.audio.audio_router import router as audio_router
 from app.routers.auth.auth import router as auth_router
+from app.routers.report.add_report import router as add_report_router
 from  app.routers.patient.edit_patient import router as patient_router
 from  app.routers.patient.changePassword import router as change_password_router
 from app.routers.doctors.view_doctorProfile import router as doctor_profile_router
@@ -37,6 +38,8 @@ from app.routers.offer.add_offer import router as add_offer_router
 from app.routers.new.view_new import router as view_new_router
 from app.routers.offer.view_offer import router as view_offer_router
 from app.routers.device.add_device import router as add_device_router
+from app.routers.doctors.add_doctor import router as add_doctor_router
+from app.routers.secretary.add_secretary import router as add_secretary_router
 
 
 app = FastAPI()
@@ -69,4 +72,7 @@ app.include_router(service_router)
 app.include_router(change_password_router)
 app.include_router(patient_router)
 app.include_router(doctor_profile_router)
-# app.include_router(audio_router)
+app.include_router(add_report_router)
+app.include_router(add_doctor_router)
+app.include_router(add_secretary_router)
+

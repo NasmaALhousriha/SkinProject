@@ -10,6 +10,7 @@ import os
 from app.database import get_db
 from app.models.user_model import User, UserRoleEnum
 from app.models.patient_model import PatientProfile
+from app.dependencies import hash_password
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
@@ -27,9 +28,6 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     role: str
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password[:72])  # bcrypt limit
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -76,12 +74,11 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
         raise HTTPException(status_code=403, detail="Doctor profile not found")
     if user.role == UserRoleEnum.SECRETARY and not user.secretary_profile:
         raise HTTPException(status_code=403, detail="Secretary profile not found")
+    # Admin doesn't need a profile
 
     access_token = create_access_token(data={
         "sub": str(user.user_id),
         "role": user.role.value
     })
 
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
-
-
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role.value}

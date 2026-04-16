@@ -19,7 +19,7 @@ def seed_user(db: Session):
         name="nasma",
         email="nasma@gmail.com",
         password_hash=hashed_password,
-        role=UserRoleEnum.PATIENT
+        role=UserRoleEnum.ADMIN
     )
     db.add(user)
     db.commit()
@@ -52,11 +52,9 @@ def seed_services(db: Session):
     print("Checking services...")
 
     for svc in static_services:
-        # نفحص هل الخدمة موجودة مسبقاً؟
         existing_service = db.query(Service).filter(Service.name == svc["name"]).first()
 
         if not existing_service:
-            # إذا غير موجودة، نقوم بإنشائها
             new_service = Service(
                 name=svc["name"],
             )
@@ -68,7 +66,6 @@ def seed_services(db: Session):
     db.commit()
     print("Services seeding completed.")
 
-# تشغيل الـ Seeder مباشرة
 if __name__ == "__main__":
     from app.database import LocalSession
     with LocalSession() as db:

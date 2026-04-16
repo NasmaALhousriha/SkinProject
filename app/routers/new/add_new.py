@@ -11,16 +11,29 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
-class NewsBase(BaseModel):
+class NewsCreate(BaseModel):
+    title: str
+    content: str
+    image: Optional[UploadFile] = None
+
+    @classmethod
+    def as_form(
+        cls,
+        title: str = Form(...),
+        content: str = Form(...),
+        image: UploadFile = File(None),
+    ):
+        return cls(
+            title=title,
+            content=content,
+            image=image,
+        )
+
+class NewsResponse(BaseModel):
+    news_id: int
     title: str
     content: str
     image: Optional[str] = None
-
-class NewsCreate(NewsBase):
-    pass
-
-class NewsResponse(NewsBase):
-    news_id: int
     date: datetime
 
     class Config:
@@ -38,25 +51,23 @@ if not os.path.exists(UPLOAD_DIR):
 
 @router.post("/", response_model=NewsResponse)
 def add_news(
-        title: str = Form(...),
-        content: str = Form(...),
-        image: UploadFile = File(None),
+        news_data: NewsCreate = Depends(NewsCreate.as_form),
         db: Session = Depends(get_db)
 
 ):
     saved_image_path = None
 
     # 2. إذا وجد ملف، نقوم بحفظه على الهاردسك أولاً
-    if image:
+    if news_data.image:
         try:
             # توليد اسم فريد للملف لمنع التكرار (مثلاً: a1b2c3d4.jpg)
-            extension = image.filename.split(".")[-1]
+            extension = news_data.image.filename.split(".")[-1]
             unique_filename = f"{uuid4()}.{extension}"
             file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
             # حفظ الملف فعلياً
             with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
+                shutil.copyfileobj(news_data.image.file, buffer)
 
             # 3. المسار الذي سيتم تخزينه في قاعدة البيانات (String)
             saved_image_path = f"/{UPLOAD_DIR}/{unique_filename}"
@@ -66,8 +77,8 @@ def add_news(
     # 4. الآن نمرر 'saved_image_path' (النص) وليس الـ 'image' (الكائن)
 
     new_item = News(
-        title=title,
-        content=content,
+        title=news_data.title,
+        content=news_data.content,
         image=saved_image_path
     )
 

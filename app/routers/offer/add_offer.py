@@ -11,17 +11,38 @@ from app.models.user_model import UserRoleEnum
 from app.dependencies import get_current_user
 
 
-class OfferBase(BaseModel):
+class OfferCreate(BaseModel):
+    title: str
+    description: str
+    image: Optional[UploadFile] = None
+    duration: int
+    discount: int
+
+    @classmethod
+    def as_form(
+        cls,
+        title: str = Form(...),
+        description: str = Form(...),
+        image: UploadFile = File(None),
+        duration: int = Form(...),
+        discount: int = Form(...),
+    ):
+        return cls(
+            title=title,
+            description=description,
+            image=image,
+            duration=duration,
+            discount=discount,
+        )
+
+
+class OfferResponse(BaseModel):
+    offer_id: int
     title: str
     description: str
     image: Optional[str] = None
     duration: int
     discount: int
-
-
-
-class OfferResponse(OfferBase):
-    offer_id: int
 
     class Config:
         from_attributes = True
@@ -36,11 +57,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/", response_model=OfferResponse)
 def add_offer(
-    title: str = Form(...),
-    description: str = Form(...),
-    image: UploadFile = File(None),
-    duration: int = Form(...),
-    discount: int = Form(...),
+    offer_data: OfferCreate = Depends(OfferCreate.as_form),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 
@@ -51,25 +68,25 @@ def add_offer(
 
     saved_image_path = None
 
-    if image:
+    if offer_data.image:
         try:
-            extension = image.filename.split(".")[-1].lower()
+            extension = offer_data.image.filename.split(".")[-1].lower()
             unique_filename = f"{uuid4()}.{extension}"
             file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
             with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(image.file, buffer)
+                shutil.copyfileobj(offer_data.image.file, buffer)
 
             saved_image_path = f"/{UPLOAD_DIR}/{unique_filename}"
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
 
     offer_item = Offer(
-        title=title,
-        description=description,
+        title=offer_data.title,
+        description=offer_data.description,
         image=saved_image_path,
-        duration=duration,
-        discount=discount
+        duration=offer_data.duration,
+        discount=offer_data.discount
     )
 
     db.add(offer_item)

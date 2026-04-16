@@ -1,4 +1,3 @@
-
 from app.database import Base
 from typing import List, TYPE_CHECKING
 from sqlalchemy import Integer, String, ForeignKey
@@ -20,7 +19,7 @@ class Device(Base):
     image: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # foreignkey
-    specialist_id: Mapped[int] = mapped_column(ForeignKey("specialist.specialist_id"), nullable=False)
+    specialist_id: Mapped[int] = mapped_column(ForeignKey("specialists.specialist_id"), nullable=False)
 
     # relationship
     service: Mapped["Service"] = relationship("Service", back_populates="devices")

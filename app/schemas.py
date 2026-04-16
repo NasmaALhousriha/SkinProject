@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel, EmailStr
-from fastapi import Form
+from fastapi import Form, UploadFile, File
 from app.models.patient_model import GenderEnum
 
 
@@ -108,3 +108,60 @@ class DiagnosisOut(BaseModel):
     created_at: datetime
     class Config:
         orm_mode = True
+
+# ===== Doctors =====
+class DoctorCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone: Optional[str] = None
+    photo: Optional[str] = None
+    bio: Optional[str] = None
+    years_of_experience: Optional[int] = None
+    position: Optional[str] = None
+    education: Optional[str] = None
+    clinical_expertise: Optional[str] = None
+
+    @classmethod
+    def as_form(
+        cls,
+        name: str = Form(...),
+        email: EmailStr = Form(...),
+        password: str = Form(...),
+        phone: Optional[str] = Form(None),
+        photo: Optional[UploadFile] = File(None),
+        bio: Optional[str] = Form(None),
+        years_of_experience: Optional[int] = Form(None),
+        position: Optional[str] = Form(None),
+        education: Optional[str] = Form(None),
+        clinical_expertise: Optional[str] = Form(None),
+    ):
+        return cls(
+            name=name,
+            email=email,
+            password=password,
+            phone=phone,
+            photo=photo,
+            bio=bio,
+            years_of_experience=years_of_experience,
+            position=position,
+            education=education,
+            clinical_expertise=clinical_expertise,
+        )
+
+class DoctorCreateResponse(BaseModel):
+    message: str
+    doctor_id: int
+    user_id: int
+
+# ===== Secretaries =====
+class SecretaryCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone: Optional[str] = None
+
+class SecretaryCreateResponse(BaseModel):
+    message: str
+    secretary_id: int
+    user_id: int

@@ -34,4 +34,3 @@ class DoctorProfile(Base):
     diagnoses: Mapped[List["Diagnosis"]] = relationship("Diagnosis", back_populates="doctor")
     schedules: Mapped[List["DoctorSchedule"]] = relationship("DoctorSchedule", back_populates="doctor")
     services: Mapped[List["Service"]] = relationship( "Service",   secondary="doctor_services", back_populates="doctors" )
-

@@ -26,7 +26,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRoleEnum] = mapped_column(SQLAlchemyEnum(UserRoleEnum), nullable=False)
+    role: Mapped[UserRoleEnum] = mapped_column(SQLAlchemyEnum(UserRoleEnum, native_enum=False), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     photo: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -83,14 +83,3 @@ class User(Base):
 #
 #     doctor = relationship("DoctorProfile")
 #     patient = relationship("PatientProfile")
-
-
-
-
-
-
-
-
-
-
-
