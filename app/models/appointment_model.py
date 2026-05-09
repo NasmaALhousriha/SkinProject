@@ -1,4 +1,3 @@
-
 import enum
 from typing import List, TYPE_CHECKING
 from datetime import datetime
@@ -21,11 +20,13 @@ class Appointment(Base):
     __tablename__ = "appointments"
 
     appointment_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
-    date_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    status: Mapped[AppointmentTypeEnum] = mapped_column(
-        SQLAlchemyEnum(AppointmentTypeEnum, name="appointment_status_enum"), nullable=False, )
+    date_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+    status: Mapped[AppointmentTypeEnum] = mapped_column(SQLAlchemyEnum(AppointmentTypeEnum, name="appointment_status_enum"), nullable=False, )
     approved_by_secretary: Mapped[bool] = mapped_column(Boolean, default=False)
-    notes: Mapped[str] = mapped_column(String(200), nullable=True)
+    reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Foreign keys
     doctor_id: Mapped[int] = mapped_column(ForeignKey("doctor_profiles.doctor_id"), nullable=False)
@@ -36,3 +37,4 @@ class Appointment(Base):
     doctor: Mapped["DoctorProfile"] = relationship("DoctorProfile", back_populates="appointments")
     patient: Mapped["PatientProfile"] = relationship("PatientProfile",
                                                      back_populates="appointments")
+

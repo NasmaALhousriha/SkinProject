@@ -5,7 +5,8 @@ from app.database import Base
 from .user_model import User, UserRoleEnum
 from .service_model import Service
 from .specialist_model import Specialist
-
+from .specialist_device_model import SpecialistDevice
+from .service_device_model import ServiceDevice
 # Import profile models that depend on User
 from .secretary_model import SecretaryProfile
 from .doctor_model import DoctorProfile

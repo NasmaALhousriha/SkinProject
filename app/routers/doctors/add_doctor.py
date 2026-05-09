@@ -6,15 +6,15 @@ from datetime import datetime
 from app.database import get_db
 from app.models.user_model import User, UserRoleEnum
 from app.models.doctor_model import DoctorProfile
-from app.schemas import DoctorCreate, DoctorCreateResponse
+from app.schemas import DoctorCreate, DoctorResponse
 from app.dependencies import get_current_secretary, hash_password
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
 
-@router.post("/create", response_model=DoctorCreateResponse)
+@router.post("/create", response_model=DoctorResponse)
 def create_doctor(
-    doctor_data: DoctorCreate = Depends(DoctorCreate.as_form),
+    doctor_data: DoctorCreate,
     db: Session = Depends(get_db),
     current_secretary: User = Depends(get_current_secretary)
 ):
@@ -62,9 +62,14 @@ def create_doctor(
     db.add(doctor_profile)
     db.commit()
     db.refresh(doctor_profile)
+    db.refresh(user)
 
-    return {
-        "message": "Doctor created successfully",
-        "user_id": user.user_id,
-        "doctor_id": doctor_profile.doctor_id
-    }
+    return DoctorResponse(
+        doctor_id=doctor_profile.doctor_id,
+        user=user,
+        bio=doctor_profile.bio,
+        years_of_experience=doctor_profile.years_of_experience,
+        position=doctor_profile.position,
+        education=doctor_profile.education,
+        clinical_expertise=doctor_profile.clinical_expertise
+    )

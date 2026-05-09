@@ -1,49 +1,16 @@
 import os
 import shutil
 from uuid import uuid4
-from pydantic import BaseModel
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.specialist_model import Specialist
 from app.models.user_model import User
+from app.models.device_model import Device
 from app.dependencies import get_current_secretary
-
-
-class SpecialistCreate(BaseModel):
-    name: str
-    position: Optional[str] = None
-    years_of_experience: Optional[int] = None
-    photo: Optional[UploadFile] = None
-
-    @classmethod
-    def as_form(
-        cls,
-        name: str = Form(...),
-        position: Optional[str] = Form(None),
-        years_of_experience: Optional[int] = Form(None),
-        photo: UploadFile = File(None),
-    ):
-        return cls(
-            name=name,
-            position=position,
-            years_of_experience=years_of_experience,
-            photo=photo,
-        )
-
-
-class SpecialistResponse(BaseModel):
-    specialist_id: int
-    name: str
-    position: Optional[str] = None
-    years_of_experience: Optional[int] = None
-    photo: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
+from app.schemas import SpecialistResponse
 
 router = APIRouter(
     prefix="/specialists",
@@ -54,114 +21,120 @@ UPLOAD_DIR = "static/specialist_photos/"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-@router.post("/add", response_model=SpecialistResponse, status_code=status.HTTP_201_CREATED)
-def add_specialist(
-    specialist_data: SpecialistCreate = Depends(SpecialistCreate.as_form),
+def save_image(image: UploadFile):
+    ext = image.filename.split(".")[-1].lower()
+    allowed = {"jpg", "jpeg", "png", "webp"}
+
+    if ext not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid image type")
+
+    filename = f"{uuid4()}.{ext}"
+    path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
+
+    return f"/static/specialist_photos/{filename}"
+
+
+@router.post("/", response_model=SpecialistResponse)
+def create_specialist(
+    name: str = Form(...),
+    position: str = Form(None),
+    years_of_experience: int = Form(None),
+    device_ids: list[int] = Form([]),
+    photo: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_secretary)
 ):
-   
-    photo_path = None
-    
-    if specialist_data.photo:
-        try:
-            file_extension = specialist_data.photo.filename.split(".")[-1].lower()
-            ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
-            
-            if file_extension not in ALLOWED_EXTENSIONS:
-                raise HTTPException(status_code=400, detail="Invalid image type. Only jpg, jpeg, png, webp are allowed")
-            
-            unique_filename = f"{uuid4()}.{file_extension}"
-            file_location = os.path.join(UPLOAD_DIR, unique_filename)
-            
-            with open(file_location, "wb") as buffer:
-                shutil.copyfileobj(specialist_data.photo.file, buffer)
-            
-            photo_path = f"/static/specialist_photos/{unique_filename}"
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error saving photo: {str(e)}")
-    
-    # إنشاء الاختصاصي
-    new_specialist = Specialist(
-        name=specialist_data.name,
-        position=specialist_data.position,
-        years_of_experience=specialist_data.years_of_experience,
+
+    photo_path = save_image(photo) if photo else None
+
+    specialist = Specialist(
+        name=name,
+        position=position,
+        years_of_experience=years_of_experience,
         photo=photo_path
     )
-    
-    db.add(new_specialist)
+    if device_ids:
+        devices = db.query(Device).filter(
+            Device.device_id.in_(device_ids),
+            Device.is_active == True
+        ).all()
+        specialist.devices = devices
+
+    db.add(specialist)
     db.commit()
-    db.refresh(new_specialist)
-    
-    return new_specialist
+    db.refresh(specialist)
+
+    return specialist
 
 
 @router.get("/", response_model=list[SpecialistResponse])
 def get_all_specialists(db: Session = Depends(get_db)):
-
-    specialists = db.query(Specialist).all()
-    return specialists
+    return db.query(Specialist).all()
 
 
 @router.get("/{specialist_id}", response_model=SpecialistResponse)
 def get_specialist(specialist_id: int, db: Session = Depends(get_db)):
-   
-    specialist = db.query(Specialist).filter(Specialist.specialist_id == specialist_id).first()
-    
+
+    specialist = db.query(Specialist).filter(
+        Specialist.specialist_id == specialist_id
+    ).first()
+
     if not specialist:
         raise HTTPException(status_code=404, detail="Specialist not found")
-    
+
     return specialist
 
 
-@router.put("/{specialist_id}", response_model=SpecialistResponse)
+@router.patch("/{specialist_id}", response_model=SpecialistResponse)
 def update_specialist(
     specialist_id: int,
-    specialist_data: SpecialistCreate = Depends(SpecialistCreate.as_form),
+    name: str = Form(None),
+    position: str = Form(None),
+    years_of_experience: int = Form(None),
+    photo: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_secretary)
 ):
-    
-    specialist = db.query(Specialist).filter(Specialist.specialist_id == specialist_id).first()
-    
+
+    specialist = db.query(Specialist).filter(
+        Specialist.specialist_id == specialist_id
+    ).first()
+
     if not specialist:
         raise HTTPException(status_code=404, detail="Specialist not found")
-    
-    
-    specialist.name = specialist_data.name
-    specialist.position = specialist_data.position
-    specialist.years_of_experience = specialist_data.years_of_experience
-    
-    
-    if specialist_data.photo:
-        try:
-           
-            if specialist.photo:
-                old_file = specialist.photo.lstrip("/")
-                if os.path.exists(old_file):
-                    os.remove(old_file)
-            
-            file_extension = specialist_data.photo.filename.split(".")[-1].lower()
-            ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
-            
-            if file_extension not in ALLOWED_EXTENSIONS:
-                raise HTTPException(status_code=400, detail="Invalid image type. Only jpg, jpeg, png, webp are allowed")
-            
-            unique_filename = f"{uuid4()}.{file_extension}"
-            file_location = os.path.join(UPLOAD_DIR, unique_filename)
-            
-            with open(file_location, "wb") as buffer:
-                shutil.copyfileobj(specialist_data.photo.file, buffer)
-            
-            specialist.photo = f"/static/specialist_photos/{unique_filename}"
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error updating photo: {str(e)}")
-    
+
+    if name is not None:
+        specialist.name = name
+
+    if position is not None:
+        specialist.position = position
+
+    if years_of_experience is not None:
+        specialist.years_of_experience = years_of_experience
+
+    if photo:
+        if specialist.photo:
+            old_path = specialist.photo.lstrip("/")
+            if os.path.exists(old_path):
+                os.remove(old_path)
+
+        specialist.photo = save_image(photo)
+
     db.commit()
     db.refresh(specialist)
-    
+
     return specialist
 
 
+@router.delete("/{specialist_id}")
+def delete_specialist(specialist_id: int, db: Session = Depends(get_db)):
+    specialist = db.query(Specialist).filter(Specialist.specialist_id == specialist_id).first()
+    if not specialist:
+        raise HTTPException(status_code=404, detail="Specialist not found")
 
-
+    specialist.is_active = False
+    db.commit()
+    return {"message": "Specialist deactivated successfully"}

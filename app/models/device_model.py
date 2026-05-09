@@ -1,26 +1,33 @@
-from app.database import Base
-from typing import List, TYPE_CHECKING
-from sqlalchemy import Integer, String, ForeignKey
+# app/models/device_model.py
+from typing import List, TYPE_CHECKING, Optional
+from sqlalchemy import String, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from app.database import Base
 
 if TYPE_CHECKING:
-   from .specialist_model import Specialist
-   from  .service_model  import Service
+    from .specialist_model import Specialist
+    from .service_model import Service
+    from .service_device_model import service_device
 
 
 class Device(Base):
     __tablename__ = "devices"
 
     device_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    service_id: Mapped[int] = mapped_column(ForeignKey("services.service_id"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str | None] = mapped_column(String(300), nullable=True)
-    image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
 
-    # foreignkey
-    specialist_id: Mapped[int] = mapped_column(ForeignKey("specialists.specialist_id"), nullable=False)
+    services: Mapped[List["Service"]] = relationship(
+        "Service",
+        secondary="service_device",
+        back_populates="devices"
+    )
 
-    # relationship
-    service: Mapped["Service"] = relationship("Service", back_populates="devices")
-    specialist: Mapped["Specialist"] = relationship("Specialist", back_populates="devices", foreign_keys=[specialist_id])
+
+    specialists: Mapped[List["Specialist"]] = relationship(
+        "Specialist",
+        secondary="specialist_device",
+        back_populates="devices"
+    )

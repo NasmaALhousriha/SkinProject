@@ -2,42 +2,12 @@ import os
 import shutil
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException,File,Form,UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models import News
-# from app.schemas import NewsCreate, NewsResponse
-from pydantic import BaseModel
-from datetime import datetime
-from typing import Optional
-
-class NewsCreate(BaseModel):
-    title: str
-    content: str
-    image: Optional[UploadFile] = None
-
-    @classmethod
-    def as_form(
-        cls,
-        title: str = Form(...),
-        content: str = Form(...),
-        image: UploadFile = File(None),
-    ):
-        return cls(
-            title=title,
-            content=content,
-            image=image,
-        )
-
-class NewsResponse(BaseModel):
-    news_id: int
-    title: str
-    content: str
-    image: Optional[str] = None
-    date: datetime
-
-    class Config:
-        from_attributes = True
+from app.schemas import NewsResponse
 
 router = APIRouter(
     prefix="/news",
@@ -45,46 +15,108 @@ router = APIRouter(
 )
 
 UPLOAD_DIR = "static/news_images"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-@router.post("/", response_model=NewsResponse)
+@router.post("/add", response_model=NewsResponse)
 def add_news(
-        news_data: NewsCreate = Depends(NewsCreate.as_form),
-        db: Session = Depends(get_db)
-
+    title: str = Form(...),
+    content: str = Form(...),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
 ):
-    saved_image_path = None
+    image_path = None
 
-    # 2. إذا وجد ملف، نقوم بحفظه على الهاردسك أولاً
-    if news_data.image:
-        try:
-            # توليد اسم فريد للملف لمنع التكرار (مثلاً: a1b2c3d4.jpg)
-            extension = news_data.image.filename.split(".")[-1]
-            unique_filename = f"{uuid4()}.{extension}"
-            file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    if image:
+        ext = image.filename.split(".")[-1].lower()
+        allowed = {"jpg", "jpeg", "png", "webp"}
 
-            # حفظ الملف فعلياً
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(news_data.image.file, buffer)
+        if ext not in allowed:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid image type"
+            )
 
-            # 3. المسار الذي سيتم تخزينه في قاعدة البيانات (String)
-            saved_image_path = f"/{UPLOAD_DIR}/{unique_filename}"
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
+        filename = f"{uuid4()}.{ext}"
+        file_location = os.path.join(UPLOAD_DIR, filename)
 
-    # 4. الآن نمرر 'saved_image_path' (النص) وليس الـ 'image' (الكائن)
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        image_path = f"/{UPLOAD_DIR}/{filename}"
 
     new_item = News(
-        title=news_data.title,
-        content=news_data.content,
-        image=saved_image_path
+        title=title,
+        content=content,
+        image=image_path
     )
-
-
 
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
+
     return new_item
+
+@router.put("/{news_id}", response_model=NewsResponse)
+def update_news(
+    news_id: int,
+    title: str = Form(None),
+    content: str = Form(None),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    news = db.query(News).filter(News.news_id == news_id).first()
+
+    if not news:
+        raise HTTPException(status_code=404, detail="News not found")
+
+    if title:
+        news.title = title
+
+    if content:
+        news.content = content
+
+    if image:
+        ext = image.filename.split(".")[-1].lower()
+        allowed = {"jpg", "jpeg", "png", "webp"}
+
+        if ext not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid image type")
+
+        if news.image:
+            old_path = news.image.replace("/", "", 1)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+
+        filename = f"{uuid4()}.{ext}"
+        file_location = os.path.join(UPLOAD_DIR, filename)
+
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        news.image = f"/{UPLOAD_DIR}/{filename}"
+
+    db.commit()
+    db.refresh(news)
+
+    return news
+
+@router.delete("/{news_id}")
+def delete_news(
+    news_id: int,
+    db: Session = Depends(get_db)
+):
+    news = db.query(News).filter(News.news_id == news_id).first()
+
+    if not news:
+        raise HTTPException(status_code=404, detail="News not found")
+
+    if news.image:
+        image_path = news.image.replace("/", "", 1)
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+    db.delete(news)
+    db.commit()
+
+    return {"message": "News deleted successfully"}

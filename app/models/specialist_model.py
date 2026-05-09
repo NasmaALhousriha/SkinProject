@@ -1,5 +1,6 @@
-from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import Integer, String, ForeignKey
+# app/models/specialist_model.py
+from typing import List, TYPE_CHECKING
+from sqlalchemy import String, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -14,6 +15,10 @@ class Specialist(Base):
     photo: Mapped[str] = mapped_column(String(200), nullable=True)
     years_of_experience: Mapped[int] = mapped_column(Integer, nullable=True)
     position: Mapped[str] = mapped_column(String(100), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
 
-    # relationships
-    devices: Mapped[List["Device"]] = relationship("Device", back_populates="specialist")
+    devices: Mapped[List["Device"]] = relationship(
+        "Device",
+        secondary="specialist_device",
+        back_populates="specialists"
+    )

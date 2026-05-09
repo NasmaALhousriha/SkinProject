@@ -1,182 +1,275 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel, EmailStr
 from fastapi import Form, UploadFile, File
 from app.models.patient_model import GenderEnum
+from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, ConfigDict
+
+from enum import Enum
+from datetime import datetime
+from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel
+from typing import Optional
 
 
-class PatientUpdate(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
-    date_of_birth: Optional[date] = None
-    gender: Optional[GenderEnum] = None
-    medical_history: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+class GenderEnum(str, Enum):
+    male = "MALE"
+    female = "FEMALE"
 
-    @classmethod
-    def as_form(
-        cls,
-        name: Optional[str] = Form(None),
-        phone: Optional[str] = Form(None),
-        email: Optional[EmailStr] = Form(None),
-        date_of_birth: Optional[date] = Form(None),
-        gender: Optional[GenderEnum] = Form(None),
-        medical_history: Optional[str] = Form(None),
-    ):
-        return cls(
-            name=name,
-            phone=phone,
-            email=email,
-            date_of_birth=date_of_birth,
-            gender=gender,
-            medical_history=medical_history,
-        )
-
-
-class PatientProfileResponse(BaseModel):
-    user_id: int
+class DeviceShortResponse(BaseModel):
+    device_id: int
     name: str
+    image: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class ServiceResponse(BaseModel):
+    service_id: int
+    name: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    is_active: bool
+    devices: List[DeviceShortResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+class LoginRequest(BaseModel):
     email: str
-    phone: Optional[str]
-    date_of_birth: Optional[date]
-    gender: Optional[GenderEnum]
-    medical_history: Optional[str]
+    password: str
+
+
+class SpecialistCreate(BaseModel):
+    name: str
+    position: Optional[str] = None
+    years_of_experience: Optional[int] = None
+
+class SpecialistResponse(BaseModel):
+    specialist_id: int
+    name: str
+    position: Optional[str]
+    years_of_experience: Optional[int]
+    photo: Optional[str]
 
     class Config:
         from_attributes = True
 
 
-class UpdatePatientResponse(BaseModel):
-    message: str
-    patient_id: int
+class OfferCreate(BaseModel):
+    title: str
+    description: str
+    discount: Optional[float]
+    start_date: datetime
+    end_date: datetime
+
+class OfferResponse(BaseModel):
+    offer_id: int
+    title: str
+    description: str
+    image: Optional[str] = None
+    discount: Optional[float]
+    start_date: datetime
+    end_date: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RegisterPatientRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
     user_id: int
+
+class NewsBase(BaseModel):
+    title: str
+    content: str
+    image: Optional[str] = None
+
+class NewsResponse(BaseModel):
+    news_id: int
+    title: str
+    content: str
+    image: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DeviceCreate(BaseModel):
+    name: str
+    # service_id: int
+    # specialist_id: int
+    description: Optional[str] = None
+class DeviceResponse(BaseModel):
+    device_id: int
+    # service_id: int
+    # specialist_id: int
+    name: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: str  # doctor / patient / secretary
+    role: str
 
-class UserOut(BaseModel):
+class UserResponse(BaseModel):
     user_id: int
     name: str
     email: EmailStr
     role: str
+    phone: Optional[str]
+    photo: Optional[str]
+
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Login
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
 
-#  Appointments
-class AppointmentCreate(BaseModel):
-    doctor_id: int
-    patient_id: int
-    date_time: datetime
-    notes: Optional[str] = None
-
-class AppointmentOut(BaseModel):
-    appointment_id: int
-    doctor_id: int
-    patient_id: int
-    date_time: datetime
-    status: str
-    approved_by_secretary: bool
-    notes: Optional[str]
-    class Config:
-        orm_mode = True
-
-# Diagnosis
-class DiagnosisCreate(BaseModel):
-    doctor_id: int
-    patient_id: int
-    diagnosis_text: str
-    audio_url: Optional[str] = None
-
-class DiagnosisOut(BaseModel):
-    diagnosis_id: int
-    doctor_id: int
-    patient_id: int
-    diagnosis_text: str
-    audio_url: Optional[str]
-    created_at: datetime
-    class Config:
-        orm_mode = True
-
-#Doctors
 class DoctorCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
     phone: Optional[str] = None
-    photo: Optional[UploadFile] = None
     bio: Optional[str] = None
     years_of_experience: Optional[int] = None
     position: Optional[str] = None
     education: Optional[str] = None
     clinical_expertise: Optional[str] = None
 
-    @classmethod
-    def as_form(
-        cls,
-        name: str = Form(...),
-        email: EmailStr = Form(...),
-        password: str = Form(...),
-        phone: Optional[str] = Form(None),
-        photo: UploadFile = File(None),
-        bio: Optional[str] = Form(None),
-        years_of_experience: Optional[int] = Form(None),
-        position: Optional[str] = Form(None),
-        education: Optional[str] = Form(None),
-        clinical_expertise: Optional[str] = Form(None),
-    ):
-        return cls(
-            name=name,
-            email=email,
-            password=password,
-            phone=phone,
-            photo=photo,
-            bio=bio,
-            years_of_experience=years_of_experience,
-            position=position,
-            education=education,
-            clinical_expertise=clinical_expertise,
-        )
-
-class DoctorCreateResponse(BaseModel):
-    message: str
+class DoctorResponse(BaseModel):
     doctor_id: int
-    user_id: int
+    user: UserResponse
+    bio: Optional[str]
+    years_of_experience: Optional[int]
+    position: Optional[str]
+    education: Optional[str]
+    clinical_expertise: Optional[str]
 
-#  Secretaries
+    class Config:
+        from_attributes = True
+
+
 class SecretaryCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
     phone: Optional[str] = None
 
-    @classmethod
-    def as_form(
-        cls,
-        name: str = Form(...),
-        email: EmailStr = Form(...),
-        password: str = Form(...),
-        phone: Optional[str] = Form(None),
-    ):
-        return cls(
-            name=name,
-            email=email,
-            password=password,
-            phone=phone,
-        )
-
-class SecretaryCreateResponse(BaseModel):
-    message: str
+class SecretaryResponse(BaseModel):
     secretary_id: int
+    user: UserResponse
+
+    class Config:
+        from_attributes = True
+
+
+class PatientResponse(BaseModel):
+    patient_id: int
+    user: UserResponse
+    date_of_birth: Optional[date]
+    gender: Optional[GenderEnum]
+    medical_history: Optional[str]
+
+    class Config:
+        from_attributes = True
+class PatientUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[GenderEnum]
+    medical_history: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+class PatientUpdateResponse(BaseModel):
+    message: str
+    patient_id: int
     user_id: int
+
+
+class AppointmentCreate(BaseModel):
+    doctor_id: int
+    name: str
+    email: str
+    phone:  str
+    date: str
+    time: str
+
+class AppointmentResponse(BaseModel):
+    appointment_id: int
+    name: str
+    phone: Optional[str] = None
+    email: str
+    date: str
+    time: str
+    doctorName: str
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+class DiagnosisCreate(BaseModel):
+    doctor_id: int
+    patient_id: int
+    diagnosis_text: str
+
+class DiagnosisResponse(BaseModel):
+    diagnosis_id: int
+    doctor_id: int
+    patient_id: int
+    diagnosis_text: str
+    audio_url: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# class ServiceCreate(BaseModel):
+#     name: str
+#     description: Optional[str] = None
+#
+# class ServiceResponse(BaseModel):
+#     service_id: int
+#     name: str
+#     description: Optional[str]
+#
+#     class Config:
+#         from_attributes = True
+
+
+
+class ReportCreate(BaseModel):
+    doctor_id: int
+    patient_id: int
+    report_text: str
+    recommendations: Optional[str] = None
+
+class ReportResponse(BaseModel):
+    report_id: int
+    doctor_id: int
+    patient_id: int
+    report_text: str
+    recommendations: Optional[str]
+    audio_url: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

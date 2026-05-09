@@ -1,96 +1,156 @@
 import os
 import shutil
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, File, Form, UploadFile
+
+from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from sqlalchemy.orm import Session
+from datetime import datetime
 from app.database import get_db
 from app.models import Offer
-from pydantic import BaseModel
-from typing import Optional
 from app.models.user_model import UserRoleEnum
 from app.dependencies import get_current_user
-
-
-class OfferCreate(BaseModel):
-    title: str
-    description: str
-    image: Optional[UploadFile] = None
-    duration: int
-    discount: int
-
-    @classmethod
-    def as_form(
-        cls,
-        title: str = Form(...),
-        description: str = Form(...),
-        image: UploadFile = File(None),
-        duration: int = Form(...),
-        discount: int = Form(...),
-    ):
-        return cls(
-            title=title,
-            description=description,
-            image=image,
-            duration=duration,
-            discount=discount,
-        )
-
-
-class OfferResponse(BaseModel):
-    offer_id: int
-    title: str
-    description: str
-    image: Optional[str] = None
-    duration: int
-    discount: int
-
-    class Config:
-        from_attributes = True
+from app.schemas import OfferCreate, OfferResponse
 
 router = APIRouter(
     prefix="/offers",
-    tags=["offers"]
+    tags=["Offers"]
 )
 
 UPLOAD_DIR = "static/offer_images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.post("/", response_model=OfferResponse)
+
+@router.post("/add", response_model=OfferResponse)
 def add_offer(
-    offer_data: OfferCreate = Depends(OfferCreate.as_form),
+    title: str = Form(...),
+    description: str = Form(...),
+    start_date: datetime = Form(...),
+    end_date: datetime = Form(...),
+    discount: float = Form(...),
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
-
 ):
-    if current_user.role != UserRoleEnum.SECRETARY:
-        raise HTTPException(status_code=403, detail="Only Secretaries can add offers")
 
+    # if current_user.role != UserRoleEnum.SECRETARY:
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Only Secretaries can add offers"
+    #     )
 
-    saved_image_path = None
+    image_path = None
 
-    if offer_data.image:
-        try:
-            extension = offer_data.image.filename.split(".")[-1].lower()
-            unique_filename = f"{uuid4()}.{extension}"
-            file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    if image:
+        ext = image.filename.split(".")[-1].lower()
+        allowed = {"jpg", "jpeg", "png", "webp"}
 
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(offer_data.image.file, buffer)
+        if ext not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid image type")
 
-            saved_image_path = f"/{UPLOAD_DIR}/{unique_filename}"
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
+        filename = f"{uuid4()}.{ext}"
+        file_location = os.path.join(UPLOAD_DIR, filename)
 
-    offer_item = Offer(
-        title=offer_data.title,
-        description=offer_data.description,
-        image=saved_image_path,
-        duration=offer_data.duration,
-        discount=offer_data.discount
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        image_path = f"/{UPLOAD_DIR}/{filename}"
+
+    new_offer = Offer(
+        title=title,
+        description=description,
+        image=image_path,
+        start_date=start_date,
+        end_date=end_date,
+        discount=discount
+
     )
 
-    db.add(offer_item)
+    db.add(new_offer)
     db.commit()
-    db.refresh(offer_item)
+    db.refresh(new_offer)
 
-    return offer_item
+    return {
+        "offer_id": new_offer.offer_id,
+        "title": new_offer.title,
+        "description": new_offer.description,
+        "image": new_offer.image,
+        "start_date": new_offer.start_date,
+        "end_date": new_offer.end_date,
+        "discount": new_offer.discount
+    }
+
+
+@router.put("/{offer_id}", response_model=OfferResponse)
+def update_offer(
+    offer_id: int,
+    title: str = Form(None),
+    description: str = Form(None),
+    start_date: datetime = Form(None),
+    end_date: datetime = Form(None),
+    discount: float = Form(None),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db),
+):
+    offer = db.query(Offer).filter(Offer.offer_id == offer_id).first()
+
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if title:
+        offer.title = title
+
+    if description:
+        offer.description = description
+
+    if start_date:
+        offer.start_date = start_date
+
+    if end_date:
+        offer.end_date = end_date
+
+    if discount is not None:
+        offer.discount = discount
+
+    if image:
+        ext = image.filename.split(".")[-1].lower()
+        allowed = {"jpg", "jpeg", "png", "webp"}
+
+        if ext not in allowed:
+            raise HTTPException(status_code=400, detail="Invalid image type")
+
+        if offer.image:
+            old_path = offer.image.replace("/", "", 1)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+
+        filename = f"{uuid4()}.{ext}"
+        file_location = os.path.join(UPLOAD_DIR, filename)
+
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        offer.image = f"/{UPLOAD_DIR}/{filename}"
+
+    db.commit()
+    db.refresh(offer)
+
+    return offer
+
+@router.delete("/{offer_id}")
+def delete_offer(
+    offer_id: int,
+    db: Session = Depends(get_db),
+):
+    offer = db.query(Offer).filter(Offer.offer_id == offer_id).first()
+
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+
+    if offer.image:
+        image_path = offer.image.replace("/", "", 1)
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+    db.delete(offer)
+    db.commit()
+
+    return {"message": "Offer deleted successfully"}
