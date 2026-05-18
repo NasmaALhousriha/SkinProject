@@ -29,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers.auth.auth import router as auth_router
 # from app.routers.report.add_report import router as add_report_router
 from  app.routers.patient.edit_patient import router as patient_router
+from app.routers.notification.view_notification import router as notification_router
 from  app.routers.patient.changePassword import router as change_password_router
 from app.routers.doctors.view_doctorProfile import router as doctor_profile_router
 from app.routers.service.view_service import router as service_router
@@ -81,6 +82,7 @@ app.include_router(add_service_router)
 app.include_router(add_doctor_router)
 app.include_router(add_secretary_router)
 app.include_router(add_specialist_router)
+app.include_router(notification_router)
 app.include_router(appointment_router)
 
 

@@ -1,5 +1,5 @@
 ﻿from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, time
 from pydantic import BaseModel, EmailStr
 from fastapi import Form, UploadFile, File
 from app.models.patient_model import GenderEnum
@@ -273,3 +273,22 @@ class ReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class NotificationResponse(BaseModel):
+    notification_id: int
+    title: str
+    message: Optional[str]
+    is_read: bool
+    created_at: datetime
+    appointment_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class NotificationUpdate(BaseModel):
+    is_read: bool
+
+class RescheduleRequest(BaseModel):
+    new_date: Optional[date] = None  # تاريخ فقط
+    new_time: Optional[time] = None  # وقت فقط

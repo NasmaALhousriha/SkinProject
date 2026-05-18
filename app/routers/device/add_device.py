@@ -30,13 +30,13 @@ def create_device(
     description: str = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    # current_user=Depends(get_current_user)
 ):
-    if current_user.role != UserRoleEnum.SECRETARY:
-        raise HTTPException(
-            status_code=403,
-            detail="Only Secretaries can add devices"
-        )
+    # if current_user.role != UserRoleEnum.SECRETARY:
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Only Secretaries can add devices"
+    #     )
 
     # # service = db.query(Service).filter(Service.service_id == service_id).first()
     # if not service:
@@ -89,10 +89,10 @@ def update_device(
     description: str = Form(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    # current_user=Depends(get_current_user)
 ):
-    if current_user.role != UserRoleEnum.SECRETARY:
-        raise HTTPException(status_code=403, detail="Only Secretaries can update devices")
+    # if current_user.role != UserRoleEnum.SECRETARY:
+    #     raise HTTPException(status_code=403, detail="Only Secretaries can update devices")
 
     device = db.query(Device).filter(Device.device_id == device_id).first()
     if not device:
@@ -146,13 +146,13 @@ def update_device(
 def delete_device(
         device_id: int,
         db: Session = Depends(get_db),
-        current_user=Depends(get_current_user)
+        # current_user=Depends(get_current_user)
 ):
-    if current_user.role != UserRoleEnum.SECRETARY:
-        raise HTTPException(
-            status_code=403,
-            detail="Only Secretaries can delete devices"
-        )
+    # if current_user.role != UserRoleEnum.SECRETARY:
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Only Secretaries can delete devices"
+    #     )
 
     device = db.query(Device).filter(Device.device_id == device_id).first()
 

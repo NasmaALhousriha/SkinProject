@@ -136,7 +136,7 @@ def update_appointment(
     if not appointment:
         raise HTTPException(404, "Appointment not found")
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     time_difference = appointment.date_time - now
 

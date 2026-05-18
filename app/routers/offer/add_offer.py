@@ -1,12 +1,13 @@
 import os
 import shutil
 from uuid import uuid4
-
-from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
 from app.database import get_db
 from app.models import Offer
+from app.services.notification_services import NotificationService
+from app.database import SessionLocal
 from app.models.user_model import UserRoleEnum
 from app.dependencies import get_current_user
 from app.schemas import OfferCreate, OfferResponse
@@ -22,6 +23,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/add", response_model=OfferResponse)
 def add_offer(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     description: str = Form(...),
     start_date: datetime = Form(...),
@@ -31,11 +33,6 @@ def add_offer(
     db: Session = Depends(get_db),
 ):
 
-    # if current_user.role != UserRoleEnum.SECRETARY:
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Only Secretaries can add offers"
-    #     )
 
     image_path = None
 
@@ -67,6 +64,14 @@ def add_offer(
     db.add(new_offer)
     db.commit()
     db.refresh(new_offer)
+
+    background_tasks.add_task(
+        NotificationService.notify_all_patients,
+        SessionLocal,
+        title="🔥 عرض جديد!",
+        message=f"لقد أضفنا عرضاً جديداً: {title}",
+
+    )
 
     return {
         "offer_id": new_offer.offer_id,
