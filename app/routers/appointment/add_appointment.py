@@ -30,33 +30,21 @@ async def add_appointment(
         date_time = datetime.strptime(
             f"{data.date} {data.time}",
             "%Y-%m-%d %H:%M"
-        )
+        ).replace(tzinfo=timezone.utc)
+
     except ValueError:
         raise HTTPException(
             status_code=400,
             detail="Invalid date/time format. Use YYYY-MM-DD and HH:MM"
         )
 
-    if date_time < datetime.now():
-        raise HTTPException(
+    if date_time < datetime.now(timezone.utc):        raise HTTPException(
             status_code=400,
             detail="Cannot book appointment in the past"
         )
 
     start_time = date_time
     end_time = start_time + timedelta(minutes=30)
-
-    existing_appointment = db.query(Appointment).filter(
-
-        Appointment.date_time >= start_time,
-        Appointment.date_time < end_time
-    ).first()
-
-    if existing_appointment:
-        raise HTTPException(
-            status_code=400,
-            detail="This time slot is already booked"
-        )
 
     doctor = db.query(DoctorProfile).filter(
         DoctorProfile.doctor_id == data.doctor_id
@@ -128,29 +116,70 @@ def update_appointment(
     data: AppointmentCreate,
     db: Session = Depends(get_db)
 ):
-
     appointment = db.query(Appointment).filter(
         Appointment.appointment_id == appointment_id
     ).first()
 
     if not appointment:
-        raise HTTPException(404, "Appointment not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Appointment not found"
+        )
+
+    try:
+        new_date_time = datetime.strptime(
+            f"{data.date} {data.time}",
+            "%Y-%m-%d %H:%M"
+        ).replace(tzinfo=timezone.utc)
+
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date/time format. Use YYYY-MM-DD and HH:MM"
+        )
 
     now = datetime.now(timezone.utc)
 
-    time_difference = appointment.date_time - now
-
-    if time_difference < timedelta(hours=24):
+    if appointment.date_time - now < timedelta(hours=24):
         raise HTTPException(
             status_code=400,
             detail="Appointments cannot be modified within 24 hours"
         )
 
-    appointment.date_time = datetime.strptime(
-        f"{data.date} {data.time}",
-        "%Y-%m-%d %H:%M"
-    )
+    if new_date_time < now:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot book appointment in the past"
+        )
 
+    start_time = new_date_time
+    end_time = start_time + timedelta(minutes=30)
+
+    conflict = db.query(Appointment).filter(
+        Appointment.appointment_id != appointment_id,
+        Appointment.doctor_id == data.doctor_id,
+        Appointment.date_time >= start_time,
+        Appointment.date_time < end_time,
+        Appointment.status != AppointmentTypeEnum.CANCELLED
+    ).first()
+
+    if conflict:
+        raise HTTPException(
+            status_code=400,
+            detail="This time slot is already booked"
+        )
+
+    doctor = db.query(DoctorProfile).filter(
+        DoctorProfile.doctor_id == data.doctor_id
+    ).first()
+
+    if not doctor:
+        raise HTTPException(
+            status_code=404,
+            detail="Doctor not found"
+        )
+
+    appointment.date_time = new_date_time
     appointment.doctor_id = data.doctor_id
 
     secretaries = db.query(User).filter(
@@ -163,8 +192,8 @@ def update_appointment(
             title="تعديل موعد",
             message=(
                 f"المريض {appointment.patient.user.name} "
-                f"عدّل موعده مع الدكتور {appointment.doctor.user.name} "
-                f"إلى {appointment.date_time.strftime('%Y-%m-%d %H:%M')}"
+                f"عدّل موعده مع الدكتور {doctor.user.name} "
+                f"إلى {new_date_time.strftime('%Y-%m-%d %H:%M')}"
             )
         )
         db.add(notification)
@@ -172,9 +201,8 @@ def update_appointment(
     db.commit()
 
     return {
-        "message": "Appointment updated"
+        "message": "Appointment updated successfully"
     }
-
 @router.get("/patient/{patient_id}")
 def get_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
 

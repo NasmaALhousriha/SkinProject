@@ -145,17 +145,18 @@ def delete_offer(
     offer_id: int,
     db: Session = Depends(get_db),
 ):
-    offer = db.query(Offer).filter(Offer.offer_id == offer_id).first()
+    offer = db.query(Offer).filter(
+        Offer.offer_id == offer_id
+    ).first()
 
     if not offer:
-        raise HTTPException(status_code=404, detail="Offer not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Offer not found"
+        )
 
-    if offer.image:
-        image_path = offer.image.replace("/", "", 1)
-        if os.path.exists(image_path):
-            os.remove(image_path)
+    offer.is_active = False
 
-    db.delete(offer)
     db.commit()
 
-    return {"message": "Offer deleted successfully"}
+    return {"message": "Offer deactivated successfully"}

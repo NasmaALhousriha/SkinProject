@@ -14,3 +14,4 @@ class Offer(Base):
     discount: Mapped[float | None] = mapped_column(Float, nullable=True)
     start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True)

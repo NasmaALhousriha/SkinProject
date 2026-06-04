@@ -21,10 +21,10 @@ def get_active_offers(db: Session = Depends(get_db)):
     now = datetime.now(timezone.utc)
 
     offers = db.query(Offer).filter(
+        Offer.is_active.is_(True),
         Offer.start_date <= now,
         Offer.end_date >= now
     ).all()
-
     return offers
 
 @router.get("/{offer_id}", response_model=OfferResponse)

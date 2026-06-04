@@ -72,7 +72,9 @@ def create_specialist(
 
 @router.get("/", response_model=list[SpecialistResponse])
 def get_all_specialists(db: Session = Depends(get_db)):
-    return db.query(Specialist).all()
+    return db.query(Specialist).filter(
+    Specialist.is_active == True
+                          ).all()
 
 
 @router.get("/{specialist_id}", response_model=SpecialistResponse)
