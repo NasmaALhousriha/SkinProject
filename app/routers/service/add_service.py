@@ -44,18 +44,20 @@ def create_service(
         description=description,
         image=image_path
     )
-
     db.add(new_service)
-    if device_ids:
-        db.query(Device).filter(Device.device_id.in_(device_ids)).update(
-            {"service_id": new_service.service_id},
-            synchronize_session=False
-        )
-
     db.commit()
     db.refresh(new_service)
-    return new_service
 
+    if device_ids:
+        devices = db.query(Device).filter(
+            Device.device_id.in_(device_ids)
+        ).all()
+
+        new_service.devices = devices
+
+        db.commit()
+        db.refresh(new_service)
+    return new_service
 
 @router.get("/", response_model=List[ServiceResponse])
 def get_services(db: Session = Depends(get_db)):
@@ -80,7 +82,50 @@ def soft_delete_service(service_id: int, db: Session = Depends(get_db)):
 
     service.is_active = False
 
-    db.query(Device).filter(Device.service_id == service_id).update({"is_active": False})
+    for device in service.devices:
+        device.is_active = False
 
     db.commit()
     return {"message": "Service and its devices deactivated successfully"}
+
+
+@router.put("/{service_id}", response_model=ServiceResponse)
+def update_service(
+    service_id: int,
+    name: str = Form(...),
+    description: str = Form(None),
+    device_ids: List[int] = Form([]),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    service = db.query(Service).options(
+        joinedload(Service.devices)
+    ).filter(
+        Service.service_id == service_id
+    ).first()
+
+    if not service:
+        raise HTTPException(
+            status_code=404,
+            detail="Service not found"
+        )
+
+    service.name = name
+    service.description = description
+
+    if image:
+        service.image = save_image(image)
+
+    devices = []
+
+    if device_ids:
+        devices = db.query(Device).filter(
+            Device.device_id.in_(device_ids)
+        ).all()
+
+    service.devices = devices
+
+    db.commit()
+    db.refresh(service)
+
+    return service

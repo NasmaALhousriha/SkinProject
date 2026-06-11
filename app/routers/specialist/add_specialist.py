@@ -45,7 +45,7 @@ def create_specialist(
     device_ids: list[int] = Form([]),
     photo: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_secretary)
+
 ):
 
     photo_path = save_image(photo) if photo else None
@@ -98,7 +98,6 @@ def update_specialist(
     years_of_experience: int = Form(None),
     photo: UploadFile = File(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_secretary)
 ):
 
     specialist = db.query(Specialist).filter(
@@ -132,7 +131,8 @@ def update_specialist(
 
 
 @router.delete("/{specialist_id}")
-def delete_specialist(specialist_id: int, db: Session = Depends(get_db)):
+def delete_specialist(specialist_id: int,
+                      db: Session = Depends(get_db)):
     specialist = db.query(Specialist).filter(Specialist.specialist_id == specialist_id).first()
     if not specialist:
         raise HTTPException(status_code=404, detail="Specialist not found")

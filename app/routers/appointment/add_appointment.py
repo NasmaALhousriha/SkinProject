@@ -66,6 +66,9 @@ async def add_appointment(
         Appointment.date_time < end_time
     ).first()
 
+    if (patient.user.phone is None or patient.user.phone.strip() == "") and data.phone:
+        patient.user.phone = data.phone
+
     if existing_appointment:
         raise HTTPException(400, "This time slot is already booked")
 
@@ -205,13 +208,15 @@ def update_appointment(
     }
 @router.get("/patient/{patient_id}")
 def get_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
-
     appointments = db.query(Appointment).options(
         joinedload(Appointment.doctor).joinedload(DoctorProfile.user)
     ).filter(
-        Appointment.patient_id == patient_id
+        Appointment.patient_id == patient_id,
+        Appointment.status.in_([
+            AppointmentTypeEnum.PENDING,
+            AppointmentTypeEnum.COMPLETED
+        ])
     ).all()
-
     return [
         {
             "appointment_id": a.appointment_id,
@@ -225,13 +230,15 @@ def get_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
 
 @router.get("/doctor/{doctor_id}")
 def get_doctor_appointments(doctor_id: int, db: Session = Depends(get_db)):
-
     appointments = db.query(Appointment).options(
         joinedload(Appointment.patient).joinedload(PatientProfile.user)
     ).filter(
-        Appointment.doctor_id == doctor_id
+        Appointment.doctor_id == doctor_id,
+        Appointment.status.in_([
+            AppointmentTypeEnum.PENDING,
+            AppointmentTypeEnum.COMPLETED
+        ])
     ).all()
-
     return [
         {
             "appointment_id": a.appointment_id,
@@ -245,3 +252,69 @@ def get_doctor_appointments(doctor_id: int, db: Session = Depends(get_db)):
     ]
 
 
+@router.delete("/{appointment_id}")
+def cancel_appointment(
+    appointment_id: int,
+    db: Session = Depends(get_db)
+):
+    appointment = db.query(Appointment).filter(
+        Appointment.appointment_id == appointment_id
+    ).first()
+
+    if not appointment:
+        raise HTTPException(
+            status_code=404,
+            detail="Appointment not found"
+        )
+
+    if appointment.status == AppointmentTypeEnum.CANCELLED:
+        raise HTTPException(
+            status_code=400,
+            detail="Appointment already cancelled"
+        )
+
+    appointment.status = AppointmentTypeEnum.CANCELLED
+
+    notification = Notification(
+        user_id=appointment.patient.user.user_id,
+        title="إلغاء موعد",
+        message=(
+            f"تم إلغاء موعدك مع الدكتور "
+            f"{appointment.doctor.user.name} "
+            f"المحدد بتاريخ "
+            f"{appointment.date_time.strftime('%Y-%m-%d %H:%M')}"
+        ),
+        is_read=False
+    )
+
+    db.add(notification)
+
+    db.commit()
+
+    return {
+        "message": "Appointment cancelled successfully"
+    }
+
+@router.get("/cancelled")
+def get_cancelled_appointments(
+    db: Session = Depends(get_db)
+):
+    appointments = db.query(Appointment).options(
+        joinedload(Appointment.patient).joinedload(PatientProfile.user),
+        joinedload(Appointment.doctor).joinedload(DoctorProfile.user)
+    ).filter(
+        Appointment.status == AppointmentTypeEnum.CANCELLED
+    ).all()
+
+    return [
+        {
+            "appointment_id": a.appointment_id,
+            "patientName": a.patient.user.name,
+            "doctorName": a.doctor.user.name,
+            "phone": a.patient.user.phone,
+            "date": a.date_time.strftime("%Y-%m-%d"),
+            "time": a.date_time.strftime("%H:%M"),
+            "status": a.status.value
+        }
+        for a in appointments
+    ]

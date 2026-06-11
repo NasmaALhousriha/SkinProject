@@ -28,11 +28,28 @@ def update_patient(
         raise HTTPException(status_code=404)
 
     update_data = data.model_dump(exclude_unset=True)
+    if "name" in update_data:
+        current_user.name = update_data.pop("name")
+
+    if "phone" in update_data:
+        current_user.phone = update_data.pop("phone")
+
+    if "email" in update_data:
+        current_user.email = update_data.pop("email")
+
 
     for key, value in update_data.items():
         setattr(patient, key, value)
 
     db.commit()
+    db.refresh(current_user)
     db.refresh(patient)
 
-    return patient
+    return {
+        "message": "Patient updated successfully",
+        "patient_id": patient.patient_id,
+        "user_id": current_user.user_id,
+        "name": current_user.name,
+        "phone": current_user.phone,
+        "email": current_user.email
+    }

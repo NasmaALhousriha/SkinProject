@@ -99,7 +99,7 @@ class NewsResponse(BaseModel):
     title: str
     content: str
     image: Optional[str] = None
-    created_at: datetime
+    date: datetime
 
     class Config:
         from_attributes = True

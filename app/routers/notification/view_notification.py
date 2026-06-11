@@ -48,32 +48,32 @@ def get_my_notifications(
 
 
 
-@router.patch("/appointments/{appointment_id}/cancel")
-def secretary_cancel_appointment(
-        appointment_id: int,
-        db: Session = Depends(get_db),
-):
-    appointment = db.query(Appointment).filter(Appointment.appointment_id == appointment_id).first()
-
-    if not appointment:
-        raise HTTPException(status_code=404, detail="الموعد غير موجود")
-
-    appointment.status = AppointmentTypeEnum.CANCELLED
-
-
-    new_notification = Notification(
-        user_id=appointment.patient.user.user_id,
-        title="تنبيه: إلغاء موعد",
-        message=f"تم إلغاء موعدك المحجوز بتاريخ {appointment.date_time.strftime('%Y-%m-%d')}. يمكنك إعادة الجدولة الآن.",
-        is_read=False,
-
-    )
-
-    db.add(new_notification)
-    db.commit()
-
-    return {"message": "تم إلغاء الموعد وإشعار المريض بنجاح"}
-
+# @router.patch("/appointments/{appointment_id}/cancel")
+# def secretary_cancel_appointment(
+#         appointment_id: int,
+#         db: Session = Depends(get_db),
+# ):
+#     appointment = db.query(Appointment).filter(Appointment.appointment_id == appointment_id).first()
+#
+#     if not appointment:
+#         raise HTTPException(status_code=404, detail="الموعد غير موجود")
+#
+#     appointment.status = AppointmentTypeEnum.CANCELLED
+#
+#
+#     new_notification = Notification(
+#         user_id=appointment.patient.user.user_id,
+#         title="تنبيه: إلغاء موعد",
+#         message=f"تم إلغاء موعدك المحجوز بتاريخ {appointment.date_time.strftime('%Y-%m-%d')}. يمكنك إعادة الجدولة الآن.",
+#         is_read=False,
+#
+#     )
+#
+#     db.add(new_notification)
+#     db.commit()
+#
+#     return {"message": "تم إلغاء الموعد وإشعار المريض بنجاح"}
+#
 
 @router.patch("/appointments/{appointment_id}/reschedule")
 def reschedule_appointment(

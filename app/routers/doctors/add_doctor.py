@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import os, shutil
 from datetime import datetime
 
 from app.database import get_db
+from app.models import Appointment, PatientProfile
+from app.models.appointment_model import AppointmentTypeEnum
 from app.models.user_model import User, UserRoleEnum
 from app.models.doctor_model import DoctorProfile
 from app.schemas import DoctorCreate, DoctorResponse
@@ -73,3 +75,29 @@ def create_doctor(
         education=doctor_profile.education,
         clinical_expertise=doctor_profile.clinical_expertise
     )
+
+
+
+@router.get("/doctor/{doctor_id}/cancelled")
+def get_doctor_cancelled_appointments(
+    doctor_id: int,
+    db: Session = Depends(get_db)
+):
+    appointments = db.query(Appointment).options(
+        joinedload(Appointment.patient).joinedload(PatientProfile.user)
+    ).filter(
+        Appointment.doctor_id == doctor_id,
+        Appointment.status == AppointmentTypeEnum.CANCELLED
+    ).all()
+
+    return [
+        {
+            "appointment_id": a.appointment_id,
+            "patientName": a.patient.user.name,
+            "phone": a.patient.user.phone,
+            "date": a.date_time.strftime("%Y-%m-%d"),
+            "time": a.date_time.strftime("%H:%M"),
+            "status": a.status.value
+        }
+        for a in appointments
+    ]
