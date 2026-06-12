@@ -31,7 +31,6 @@ from app.routers.auth.auth import router as auth_router
 from  app.routers.patient.edit_patient import router as patient_router
 from app.routers.notification.view_notification import router as notification_router
 from  app.routers.patient.changePassword import router as change_password_router
-from app.routers.doctors.view_doctorProfile import router as doctor_profile_router
 from app.routers.service.view_service import router as service_router
 from app.routers.service.add_service import router as add_service_router
 from app.routers.device.view_device import router as device_router
@@ -77,7 +76,6 @@ app.include_router(view_new_router)
 app.include_router(service_router)
 app.include_router(change_password_router)
 app.include_router(patient_router)
-app.include_router(doctor_profile_router)
 app.include_router(add_service_router)
 app.include_router(add_doctor_router)
 app.include_router(add_secretary_router)

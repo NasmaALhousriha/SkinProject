@@ -1,7 +1,7 @@
 # doctor
 import enum
 from typing import List, TYPE_CHECKING
-from sqlalchemy import Integer, String, ForeignKey, Text
+from sqlalchemy import Integer, String, ForeignKey, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -22,6 +22,7 @@ class DoctorProfile(Base):
     bio: Mapped[str] = mapped_column(String(200), nullable=True)
     years_of_experience: Mapped[int] = mapped_column(Integer, nullable=True)
     position: Mapped[str] = mapped_column(String(100), nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     education: Mapped[str] = mapped_column(String(200), nullable=True)
     clinical_expertise: Mapped[str] = mapped_column(String(200), nullable=True)
     # Foreign Key

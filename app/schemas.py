@@ -2,6 +2,8 @@
 from datetime import date, datetime, time
 from pydantic import BaseModel, EmailStr
 from fastapi import Form, UploadFile, File
+
+from app.models.doctorschedule_model import DayOfWeekEnum
 from app.models.patient_model import GenderEnum
 from pydantic import BaseModel
 from typing import Optional
@@ -20,6 +22,16 @@ from typing import Optional
 class GenderEnum(str, Enum):
     male = "MALE"
     female = "FEMALE"
+
+
+class DayOfWeekEnum(str, Enum):
+    MONDAY = "Monday"
+    TUESDAY = "Tuesday"
+    WEDNESDAY = "Wednesday"
+    THURSDAY = "Thursday"
+    FRIDAY = "Friday"
+    SATURDAY = "Saturday"
+    SUNDAY = "Sunday"
 
 class DeviceShortResponse(BaseModel):
     device_id: int
@@ -139,29 +151,55 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ClinicHour(BaseModel):
+    day: str
+    start: str
+    end: str
+
 
 class DoctorCreate(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     password: str
+    phone: str
+    bio: str
+    years_of_experience: int
+    position: str
+    education: str
+    clinical_expertise: str
+    clinicHours: List[ClinicHour]
+
+class DoctorUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+
     phone: Optional[str] = None
-    bio: Optional[str] = None
-    years_of_experience: Optional[int] = None
     position: Optional[str] = None
     education: Optional[str] = None
     clinical_expertise: Optional[str] = None
+    years_of_experience: Optional[int] = None
+    bio: Optional[str] = None
+
+    clinicHours: Optional[List[ClinicHour]] = None
 
 class DoctorResponse(BaseModel):
     doctor_id: int
-    user: UserResponse
-    bio: Optional[str]
-    years_of_experience: Optional[int]
+    name: str
+    email: EmailStr
+    phone: Optional[str]
     position: Optional[str]
     education: Optional[str]
     clinical_expertise: Optional[str]
+    years_of_experience: Optional[int]
+    bio: Optional[str]
+
+    clinicHours: List[ClinicHour] = []
 
     class Config:
         from_attributes = True
+
+
 
 
 class SecretaryCreate(BaseModel):
