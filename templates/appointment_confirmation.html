@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Cairo', Arial;
+            background-color: #f4f6f8;
+            padding: 20px;
+        }
+        .card {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #0066cc, #00c6ff);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .row {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 5px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: gray;
+            padding: 15px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="card">
+    <div class="header">
+        <h2>✅ تم تأكيد موعدك</h2>
+    </div>
+
+    <div class="content">
+        <p>مرحباً {{ patient_name }}</p>
+
+        <div class="row">👨‍⚕️ الطبيب: {{ doctor_name }}</div>
+        <div class="row">📅 التاريخ: {{ date }}</div>
+        <div class="row">⏰ الوقت: {{ time }}</div>
+
+        <p>يرجى الحضور قبل الموعد بـ 15 دقيقة</p>
+    </div>
+
+    <div class="footer">
+        هذا البريد تلقائي - لا ترد عليه
+    </div>
+</div>
+</body>
+</html>
